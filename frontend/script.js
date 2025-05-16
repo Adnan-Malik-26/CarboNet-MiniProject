@@ -49,25 +49,31 @@ function calculateStatistics() {
 
 // Function to update the dashboard with calculated values
 function updateDashboard(carbonFootprint, tokenBalance, offsets) {
-    document.querySelector('.stat-value:nth-child(1)').textContent = `${carbonFootprint.toFixed(2)} tons`;
-    document.querySelector('.stat-value:nth-child(2)').textContent = `${tokenBalance.toFixed(2)}`;
-    document.querySelector('.stat-value:nth-child(3)').textContent = `${offsets.toFixed(2)} tons`;
+    const carbonFootprintElement = document.querySelector('.stat-value:nth-child(1)');
+    const tokenBalanceElement = document.querySelector('.stat-value:nth-child(2)');
+    const offsetsElement = document.querySelector('.stat-value:nth-child(3)');
+
+    if (carbonFootprintElement) {
+        carbonFootprintElement.textContent = carbonFootprint !== null ? `${carbonFootprint.toFixed(2)} tons` : '0.00 tons';
+    } else {
+        console.error('Carbon footprint element not found');
+    }
+
+    if (tokenBalanceElement) {
+        tokenBalanceElement.textContent = tokenBalance !== null ? `${tokenBalance.toFixed(2)}` : '0';
+    } else {
+        console.error('Token balance element not found');
+    }
+
+    if (offsetsElement) {
+        offsetsElement.textContent = offsets !== null ? `${offsets.toFixed(2)} tons` : '0.00 tons';
+    } else {
+        console.error('Offsets element not found');
+    }
 }
 
-// Modify the complete callback in loadCSV function
-async function loadCSV() {
-    const response = await fetch('sample-data.csv');
-    const text = await response.text();
-    Papa.parse(text, {
-        header: true,
-        complete: (results) => {
-            emissionsData = results.data;
-            console.log('Loaded emissions data:', emissionsData); // Check the loaded data
-            calculateStatistics(); // Calculate and update statistics
-            updateChart('week'); // Default to week view
-        }
-    });
-}
+
+
 // Function to load CSV data
 async function loadCSV() {
     const response = await fetch('sample-data.csv');
@@ -156,6 +162,16 @@ function initChart(data) {
         }
     });
 }
+
+// Function to disconnect from MetaMask
+function disconnect() {
+    accounts = []; // Clear the accounts array
+    console.log('Disconnected from MetaMask');
+}
+
+
+// Add a button in your HTML to trigger the disconnect
+document.getElementById('disconnectFromMetamask').addEventListener('click', disconnect);
 
 // Connect button event listener using the ID
 const connectButton = document.getElementById('connectToMetamask');
