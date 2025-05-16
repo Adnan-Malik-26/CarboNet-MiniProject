@@ -1,135 +1,175 @@
-// script.js
+// Initialize Web3
+let web3;
+let accounts;
+let emissionsData = [];
+let chart;
 
-// DOM Elements
-const loginBtn = document.getElementById('login-btn');
-const signUpBtn = document.querySelector('.btn-primary');
-const loginModal = document.getElementById('login-modal');
-const modalClose = document.querySelector('.modal-close');
-const cancelLoginBtn = document.getElementById('cancel-login');
-const loginForm = document.getElementById('login-form');
-const loginOverlay = document.querySelector('.modal-overlay');
-
-// Show login modal when login button is clicked
-loginBtn.addEventListener('click', () => {
-    loginModal.style.display = 'block';
-    loginOverlay.style.display = 'block';
-});
-
-// Close the login modal
-modalClose.addEventListener('click', () => {
-    loginModal.style.display = 'none';
-    loginOverlay.style.display = 'none';
-});
-
-// Close the login modal when cancel button is clicked
-cancelLoginBtn.addEventListener('click', () => {
-    loginModal.style.display = 'none';
-    loginOverlay.style.display = 'none';
-});
-
-// Submit the login form
-loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-
-    // Simulate a login attempt
-    if (email && password) {
-        alert(`Logged in as ${email}`);
-        loginModal.style.display = 'none';
-        loginOverlay.style.display = 'none';
+// Function to initialize Web3
+async function init() {
+    if (typeof window.ethereum !== 'undefined') {
+        web3 = new Web3(window.ethereum);
+        try {
+            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            accounts = await web3.eth.getAccounts();
+            console.log('Connected accounts:', accounts);
+        } catch (error) {
+            console.error('User  denied account access or there was an error:', error);
+        }
     } else {
-        alert('Please enter both email and password.');
+        alert('Please install MetaMask!');
     }
-});
+}
 
-// Handle active class on sidebar menu items
-const sidebarMenuItems = document.querySelectorAll('.sidebar-menu li a');
-sidebarMenuItems.forEach(item => {
-    item.addEventListener('click', () => {
-        sidebarMenuItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
+// Function to calculate statistics from emissions data
+function calculateStatistics() {
+    const now = new Date();
+    let totalEmissions = 0;
+    let totalOffsets = 0;
+    let tokenBalance = 0; // Assuming you have a way to calculate or fetch this
+
+    emissionsData.forEach(entry => {
+        const date = new Date(entry.Date);
+        const emissions = parseFloat(entry['Carbon Emissions (kg CO2e)']);
+        const offsets = parseFloat(entry['Offsets (kg CO2e)']); // Assuming you have this in your CSV
+
+        // Calculate total emissions for the current month
+        if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+            totalEmissions += emissions;
+        }
+
+        // Calculate total offsets for the current month
+        if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
+            totalOffsets += offsets;
+        }
     });
-});
 
-// Add Device button functionality
-const addDeviceBtn = document.querySelector('.btn-outline');
-addDeviceBtn.addEventListener('click', () => {
-    alert('Device addition functionality is not yet implemented.');
-});
+    // Update the dashboard with calculated values
+    updateDashboard(totalEmissions, tokenBalance, totalOffsets);
+}
 
-// Emissions chart filter buttons functionality
-const chartFilterButtons = document.querySelectorAll('.filter-btn');
-chartFilterButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        chartFilterButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        // Placeholder for chart update logic based on the selected filter
-        alert(`Showing emissions for: ${button.textContent}`);
+// Function to update the dashboard with calculated values
+function updateDashboard(carbonFootprint, tokenBalance, offsets) {
+    document.querySelector('.stat-value:nth-child(1)').textContent = `${carbonFootprint.toFixed(2)} tons`;
+    document.querySelector('.stat-value:nth-child(2)').textContent = `${tokenBalance.toFixed(2)}`;
+    document.querySelector('.stat-value:nth-child(3)').textContent = `${offsets.toFixed(2)} tons`;
+}
+
+// Modify the complete callback in loadCSV function
+async function loadCSV() {
+    const response = await fetch('sample-data.csv');
+    const text = await response.text();
+    Papa.parse(text, {
+        header: true,
+        complete: (results) => {
+            emissionsData = results.data;
+            console.log('Loaded emissions data:', emissionsData); // Check the loaded data
+            calculateStatistics(); // Calculate and update statistics
+            updateChart('week'); // Default to week view
+        }
     });
-});
-
-// Token purchase buttons functionality
-const purchaseBtns = document.querySelectorAll('.btn-primary');
-purchaseBtns.forEach(button => {
-    button.addEventListener('click', () => {
-        const creditTitle = button.closest('.credit-card').querySelector('.credit-title').textContent;
-        alert(`Purchasing credits for: ${creditTitle}`);
+}
+// Function to load CSV data
+async function loadCSV() {
+    const response = await fetch('sample-data.csv');
+    const text = await response.text();
+    Papa.parse(text, {
+        header: true,
+        complete: (results) => {
+            emissionsData = results.data;
+            console.log('Loaded emissions data:', emissionsData); // Check the loaded data
+            updateChart('week'); // Default to week view
+        }
     });
-});
+}
 
-// Data for the chart (replace this with real data or dynamic data)
-const emissionsData = {
-    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5'],
-    datasets: [{
-        label: 'Carbon Emissions (kg CO2)',
-        data: [20, 30, 25, 15, 35],  // Example data
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        borderColor: 'rgba(255, 255, 255, 1)',
-        borderWidth: 1
-    }]
-};
+// Function to update the chart based on the selected time frame
+function updateChart(timeFrame) {
+    const filteredData = filterDataByTimeFrame(emissionsData, timeFrame);
+    const labels = filteredData.map(entry => entry.Date);
+    const values = filteredData.map(entry => parseFloat(entry['Carbon Emissions (kg CO2e)']));
 
-// Create the chart
-const ctx = document.getElementById('emissionsChart').getContext('2d');
-const emissionsChart = new Chart(ctx, {
-    type: 'bar',  // You can change this to 'line', 'pie', etc.
-    data: emissionsData,
-    options: {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-                title: {
-                    display: true,
-                    text: 'Carbon Emissions (kg CO2)'
-                }
-            },
-            x: {
-                title: {
-                    display: true,
-                    text: 'Time (Weeks)'
+    console.log('Chart labels:', labels); // Log the labels
+    console.log('Chart values:', values); // Log the values
+    
+    if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.update();
+    } else {
+        initChart({ labels, values });
+    }
+}
+
+// Function to filter data based on the selected time frame
+function filterDataByTimeFrame(data, timeFrame) {
+    const now = new Date();
+    const filtered = data.filter(entry => {
+        const date = new Date(entry.Date);
+        if (timeFrame === 'day') {
+            return date.toDateString() === now.toDateString();
+        } else if (timeFrame === 'week') {
+            const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+            return date >= weekStart && date <= new Date();
+        } else if (timeFrame === 'month') {
+            return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+        } else if (timeFrame === 'year') {
+            return date.getFullYear() === now.getFullYear();
+        }
+        return false;
+    });
+    console.log('Filtered data:', filtered); // Log the filtered data
+    return filtered;
+}
+
+// Function to initialize the chart
+function initChart(data) {
+    const ctx = document.getElementById('emissionsChart').getContext('2d');
+    chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Carbon Emissions (kg CO2)',
+                data: data.values,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                borderColor: 'rgba(255, 255, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Carbon Emissions (kg CO2)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
                 }
             }
         }
-    }
-});
+    });
+}
 
-// Filter functionality for the chart
-const filterButtons = document.querySelectorAll('.filter-btn');
+// Connect button event listener using the ID
+const connectButton = document.getElementById('connectToMetamask');
+connectButton.addEventListener('click', init);
 
-filterButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const filterType = button.textContent;
-        
-        if (filterType === 'This Month') {
-            emissionsChart.data.labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
-            emissionsChart.data.datasets[0].data = [20, 30, 25, 15];
-        } else if (filterType === 'Last 30 Days') {
-            emissionsChart.data.labels = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'];
-            emissionsChart.data.datasets[0].data = [10, 15, 12, 8, 20];
-        }
+// Load CSV data on page load
+window.onload = loadCSV;
 
-        emissionsChart.update();
+// Add event listeners for the filter buttons
+document.querySelectorAll('.filter-btn').forEach(button => {
+    button.addEventListener('click', (event) => {
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        event.target.classList.add('active');
+        updateChart(event.target.textContent.toLowerCase());
     });
 });
+

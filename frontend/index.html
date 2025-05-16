@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script src="https://cdn.ethers.io/lib/ethers-5.6.umd.min.js" type="application/javascript"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CarboNet - Transparent Carbon Offset Platform</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -13,8 +16,7 @@
     <header>
         <div class="container header-container">
             <div class="logo">
-                <i class="fas fa-leaf logo-icon"></i>
-                CarboNet</span>
+                <i class="fas fa-leaf logo-icon"></i>CarboNet
             </div>
             <nav>
                 <ul>
@@ -26,8 +28,7 @@
                 </ul>
             </nav>
             <div class="auth-buttons">
-                <button class="btn btn-outline" id="login-btn">Login</button>
-                <button class="btn btn-primary">Sign Up</button>
+                <button class="btn btn-primary" id="connectToMetamask">Connect To Metamask</button>
             </div>
         </div>
     </header>
@@ -36,7 +37,7 @@
     <section class="hero">
         <div class="container">
             <h1>Track, Verify, and Trade Carbon Offsets</h1>
-            <p>CarboNet uses IoT and blockchain technology to provide real-time tracking of carbon emissions, verify offset projects, and reward eco-friendly actions with token incentives.</p>
+            <p>CarboNet uses blockchain technology to provide real-time tracking of carbon emissions, verify offset projects, and reward eco-friendly actions with token incentives.</p>
             <div class="hero-buttons">
                 <button class="btn btn-primary">Get Started</button>
                 <button class="btn btn-outline">Learn More</button>
@@ -73,7 +74,7 @@
                                 <i class="fas fa-cloud"></i>
                             </div>
                         </div>
-                        <div class="stat-value">2.4 tons</div>
+                        <div class="stat-value" id="carbonFootprint">2.4 tons</div>
                         <div class="stat-label">Monthly average</div>
                     </div>
                     <div class="stat-card">
@@ -83,8 +84,8 @@
                                 <i class="fas fa-coins"></i>
                             </div>
                         </div>
-                        <div class="stat-value">243.5</div>
-                        <div class="stat-label">CarboTokens</div>
+                        <div class="stat-value" id="tokenBalance">243.5</div>
+                        <div class="stat-label">Carbon Credits</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-header">
@@ -93,7 +94,7 @@
                                 <i class="fas fa-tree"></i>
                             </div>
                         </div>
-                        <div class="stat-value">1.2 tons</div>
+                        <div class="stat-value" id="offsets">1.2 tons</div>
                         <div class="stat-label">This month</div>
                     </div>
                     <div class="stat-card">
@@ -207,7 +208,7 @@
                         <p class="credit-description">This project focuses on restoring degraded areas of the Amazon rainforest, promoting biodiversity and carbon sequestration.</p>
                         <div class="credit-footer">
                             <div class="credit-price">15 tokens per ton</div>
-                            <button class="btn btn-primary">Purchase</button>
+                            <button class="btn btn-primary" id="purchase">Purchase</button>
                         </div>
                     </div>
                 </div>
