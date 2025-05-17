@@ -6,7 +6,7 @@ import "./CarbonCreditToken.sol";
 contract CarbonMarketplace {
     CarbonCreditToken public token;
     address public owner;
-    uint256 public pricePerCredit = 1 ether;
+    uint256 public pricePerCredit = 100;
 
     constructor(address _token) {
         token = CarbonCreditToken(_token);

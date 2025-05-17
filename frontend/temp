@@ -1,192 +1,48 @@
-// Function to calculate statistics from emissions data
-function calculateStatistics() {
-    const now = new Date();
-    let totalEmissions = 0;
-    let totalOffsets = 0;
-    let tokenBalance = 0; // Assuming you have a way to calculate or fetch this
+const carbonMarketplaceAddress = '0xYourCarbonMarketplaceAddress'; // Replace with the actual address of the CarbonMarketplace contract
+let carbonMarketplaceContract;
 
-    emissionsData.forEach(entry => {
-        const date = new Date(entry.Date);
-        const emissions = parseFloat(entry['Carbon Emissions (tons)']);
-        const offsets = parseFloat(entry['Carbon Offsets (tons)']); // Updated field name
-
-        // Calculate total emissions for the current month
-        if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-            totalEmissions += emissions;
-            totalOffsets += offsets; // Calculate total offsets for the current month
-        }
-    });
-
-    // Example calculation for token balance (you can adjust as needed)
-    tokenBalance = (totalEmissions - totalOffsets) * 10; 
-
-    // Update the dashboard with calculated values
-    updateDashboard(totalEmissions, tokenBalance, totalOffsets);
-}
-
-// Function to update the dashboard with calculated values
-function updateDashboard(carbonFootprint, tokenBalance, offsets) {
-    const carbonFootprintElement = document.getElementById('carbonFootprint');
-    const tokenBalanceElement = document.getElementById('tokenBalance');
-    const offsetsElement = document.getElementById('offsets');
-
-    if (carbonFootprintElement) {
-        carbonFootprintElement.textContent = carbonFootprint !== null ? `${carbonFootprint.toFixed(2)} tons` : '0.00 tons';
-    } else {
-        console.error('Carbon footprint element not found');
-    }
-
-    if (tokenBalanceElement) {
-        tokenBalanceElement.textContent = tokenBalance !== null ? `${tokenBalance.toFixed(2)}` : '0';
-    } else {
-        console.error('Token balance element not found');
-    }
-
-    if (offsetsElement) {
-        offsetsElement.textContent = offsets !== null ? `${offsets.toFixed(2)} tons` : '0.00 tons';
-    } else {
-        console.error('Offsets element not found');
-    }
-}
-
-// Function to load CSV data
-async function loadCSV() {
+// Function to initialize contracts
+async function initContracts() {
     try {
-        const response = await fetch('sample-data.csv'); // Ensure this path is correct
-        if (!response.ok) throw new Error('Failed to load CSV file');
-        const text = await response.text();
-        Papa.parse(text, {
-            header: true,
-            skipEmptyLines: true,
-            complete: (results) => {
-                emissionsData = results.data;
-                console.log('Loaded emissions data:', emissionsData); // Check the loaded data
-                calculateStatistics(); // Calculate statistics after loading data
-                updateChart('week'); // Default to week view
-            }
-        });
+        const response = await fetch('assets/TokenABI.json');
+        const data = await response.json(); // Fetch and parse the ABI JSON
+        const abi = data.abi || data; // Access the abi property or use data directly
+
+        // Initialize the CarbonMarketplace contract
+        carbonMarketplaceContract = new web3.eth.Contract(abi, carbonMarketplaceAddress);
+        console.log('CarbonMarketplace contract initialized successfully');
     } catch (error) {
-        console.error('Error loading CSV:', error);
+        console.error('Error initializing contract:', error);
     }
 }
 
-// Add event listeners after DOM content is loaded
-window.addEventListener('DOMContentLoaded', () => {
-    // Load CSV data on page load
-    loadCSV();
-    // Connect button event listener
-    const connectButton = document.getElementById('connectToMetamask');
-    if (connectButton) {
-        connectButton.addEventListener('click', init);
-    } else {
+// Update the purchaseTokens function to use the CarbonMarketplace contract
+async function purchaseTokens() {
+    if (!web3 || !carbonMarketplaceContract) {
+        alert('Please connect to MetaMask first!');
+        return;
+    }
+    
+    const amountToPurchase = 1; // Define how many credits to purchase (this can be dynamic)
+    const pricePerCredit = 1; // Price per credit in ETH (1 ether as defined in the contract)
+    const totalCost = web3.utils.toWei((amountToPurchase * pricePerCredit).toString(), 'ether'); // Convert to wei
 
-
-function filterDataByTimeFrame(data, timeFrame) {
-    const now = new Date();
-    const filtered = data.filter(entry => {
-        const date = new Date(entry.Date);
-        if (timeFrame === 'day') {
-            return date.toDateString() === now.toDateString();
-        } else if (timeFrame === 'week') {
-            // Get start of the week (Sunday)
-            const weekStart = new Date(now);
-            weekStart.setHours(0, 0, 0, 0);
-            weekStart.setDate(now.getDate() - now.getDay());
-            // End of week is now
-            return date >= weekStart && date <= now;
-        } else if (timeFrame === 'month') {
-            return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-        } else if (timeFrame === 'year') {
-            return date.getFullYear() === now.getFullYear();
+    try {
+        const accounts = await web3.eth.getAccounts();
+        if (!accounts || accounts.length === 0) {
+            alert('No accounts found. Please connect to MetaMask first.');
+            return;
         }
-        return false;
-    });
-    console.log('Filtered data:', filtered); // Log the filtered data
-    return filtered;
-}
 
-// Function to initialize the chart
-function initChart(data) {
-    const ctx = document.getElementById('emissionsChart').getContext('2d');
-    chart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: data.labels,
-            datasets: [{
-                label: 'Carbon Emissions (tons)',
-                data: data.values,
-                backgroundColor: 'rgba(0, 123, 255, 0.5)',
-                borderColor: 'rgba(0, 123, 255, 1)',
-                borderWidth: 1,
-                borderRadius: 4,
-                hoverBackgroundColor: 'rgba(0, 123, 255, 0.7)'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Carbon Emissions (tons)'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Date'
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    labels: {
-                        color: '#eee',
-                        font: { size: 14 }
-                    }
-                },
-                tooltip: {
-                    enabled: true
-                }
-            }
-        }
-    });
-}
-
-// Function to disconnect from MetaMask
-function disconnect() {
-    accounts = []; // Clear the accounts array
-    console.log('Disconnected from MetaMask');
-}
-
-// Add event listeners after DOM content is loaded
-window.addEventListener('DOMContentLoaded', () => {
-    // Load CSV data on page load
-    loadCSV();
-
-    // Connect button event listener
-    const connectButton = document.getElementById('connectToMetamask');
-    if (connectButton) {
-        connectButton.addEventListener('click', init);
-    } else {
-        console.error('Connect button not found');
-    }
-
-    // Disconnect button event listener
-    const disconnectButton = document.getElementById('disconnectFromMetamask');
-    if (disconnectButton) {
-        disconnectButton.addEventListener('click', disconnect);
-    } else {
-        console.error('Disconnect button not found');
-    }
-
-    // Add event listeners for the filter buttons
-    document.querySelectorAll('.filter-btn').forEach(button => {
-        button.addEventListener('click', (event) => {
-            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            updateChart(event.target.textContent.toLowerCase());
+        // Call the buyCredits function from the CarbonMarketplace contract
+        const response = await carbonMarketplaceContract.methods.buyCredits(amountToPurchase).send({
+            from: accounts[0],
+            value: totalCost
         });
-    });
-});
+        console.log('Purchase successful:', response);
+        alert('Credits purchased successfully!');
+    } catch (error) {
+        console.error('Error purchasing credits:', error);
+        alert('Failed to purchase credits. Please try again.');
+    }
+}
