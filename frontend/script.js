@@ -75,11 +75,11 @@ function calculateStatistics() {
 }
 
 // Function to update the dashboard with calculated values
-function updateDashboard(carbonFootprint, tokenBalance, offsets) {
+function updateDashboard(carbonFootprint, tokenBalance, offsets, rewards) {
     const carbonFootprintElement = document.getElementById('carbonFootprint');
     const tokenBalanceElement = document.getElementById('tokenBalance');
     const offsetsElement = document.getElementById('offsets');
-
+    const rewardsElement = document.getElementById('rewards')
     if (carbonFootprintElement) {
         carbonFootprintElement.textContent = carbonFootprint !== null ? `${carbonFootprint.toFixed(2)} tons` : '0.00 tons';
     } else {
@@ -94,6 +94,11 @@ function updateDashboard(carbonFootprint, tokenBalance, offsets) {
 
     if (offsetsElement) {
         offsetsElement.textContent = offsets !== null ? `${offsets.toFixed(2)} tons` : '0.00 tons';
+    } else {
+        console.error('Offsets element not found');
+    }
+    if (rewardsElement) {
+        rewardsElement.textContent = offsets !== null ? `${rewards.toFixed(2)} tokens` : '45';
     } else {
         console.error('Offsets element not found');
     }
@@ -202,6 +207,8 @@ function disconnect() {
 
 
 async function purchaseTokens() {
+
+    updateDashboard(121.90, 10.32, 100.23, 47)
     if (!web3 || !carbonMarketplaceContract) {
         alert('Please connect to MetaMask first!');
         return;
