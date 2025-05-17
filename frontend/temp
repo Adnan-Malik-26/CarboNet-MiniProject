@@ -1,25 +1,3 @@
-// Initialize Web3
-let web3;
-let accounts;
-let emissionsData = [];
-let chart;
-
-// Function to initialize Web3
-async function init() {
-    if (typeof window.ethereum !== 'undefined') {
-        web3 = new Web3(window.ethereum);
-        try {
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
-            accounts = await web3.eth.getAccounts();
-            console.log('Connected accounts:', accounts);
-        } catch (error) {
-            console.error('User  denied account access or there was an error:', error);
-        }
-    } else {
-        alert('Please install MetaMask!');
-    }
-}
-
 // Function to calculate statistics from emissions data
 function calculateStatistics() {
     const now = new Date();
@@ -30,20 +8,18 @@ function calculateStatistics() {
     emissionsData.forEach(entry => {
         const date = new Date(entry.Date);
         const emissions = parseFloat(entry['Carbon Emissions (tons)']);
-        const offsets = parseFloat(entry['Offsets (kg CO2e)']); // Assuming you have this in your CSV
+        const offsets = parseFloat(entry['Carbon Offsets (tons)']); // Updated field name
 
         // Calculate total emissions for the current month
         if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
             totalEmissions += emissions;
-        }
-
-        // Calculate total offsets for the current month
-        if (date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()) {
-            totalOffsets += offsets;
+            totalOffsets += offsets; // Calculate total offsets for the current month
         }
     });
-    tokenBalance=25.32
-    totalOffsets=90.23
+
+    // Example calculation for token balance (you can adjust as needed)
+    tokenBalance = (totalEmissions - totalOffsets) * 10; 
+
     // Update the dashboard with calculated values
     updateDashboard(totalEmissions, tokenBalance, totalOffsets);
 }
@@ -75,38 +51,36 @@ function updateDashboard(carbonFootprint, tokenBalance, offsets) {
 
 // Function to load CSV data
 async function loadCSV() {
-    const response = await fetch('sample-data.csv');
-    const text = await response.text();
-    Papa.parse(text, {
-        header: true,
-        complete: (results) => {
-            emissionsData = results.data;
-            console.log('Loaded emissions data:', emissionsData); // Check the loaded data
-            updateChart('week'); // Default to week view
-            calculateStatistics(); // Calculate statistics after loading data
-        }
-    });
-}
-
-// Function to update the chart based on the selected time frame
-function updateChart(timeFrame) {
-    const filteredData = filterDataByTimeFrame(emissionsData, timeFrame);
-    const labels = filteredData.map(entry => entry.Date);
-    const values = filteredData.map(entry => parseFloat(entry['Carbon Emissions (tons)']));
-
-    console.log('Chart labels:', labels); // Log the labels
-    console.log('Chart values:', values); // Log the values
-    
-    if (chart) {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
-        chart.update();
-    } else {
-        initChart({ labels, values });
+    try {
+        const response = await fetch('sample-data.csv'); // Ensure this path is correct
+        if (!response.ok) throw new Error('Failed to load CSV file');
+        const text = await response.text();
+        Papa.parse(text, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                emissionsData = results.data;
+                console.log('Loaded emissions data:', emissionsData); // Check the loaded data
+                calculateStatistics(); // Calculate statistics after loading data
+                updateChart('week'); // Default to week view
+            }
+        });
+    } catch (error) {
+        console.error('Error loading CSV:', error);
     }
 }
 
-// Function to filter data based on the selected time frame
+// Add event listeners after DOM content is loaded
+window.addEventListener('DOMContentLoaded', () => {
+    // Load CSV data on page load
+    loadCSV();
+    // Connect button event listener
+    const connectButton = document.getElementById('connectToMetamask');
+    if (connectButton) {
+        connectButton.addEventListener('click', init);
+    } else {
+
+
 function filterDataByTimeFrame(data, timeFrame) {
     const now = new Date();
     const filtered = data.filter(entry => {
@@ -114,8 +88,12 @@ function filterDataByTimeFrame(data, timeFrame) {
         if (timeFrame === 'day') {
             return date.toDateString() === now.toDateString();
         } else if (timeFrame === 'week') {
-            const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
-            return date >= weekStart && date <= new Date();
+            // Get start of the week (Sunday)
+            const weekStart = new Date(now);
+            weekStart.setHours(0, 0, 0, 0);
+            weekStart.setDate(now.getDate() - now.getDay());
+            // End of week is now
+            return date >= weekStart && date <= now;
         } else if (timeFrame === 'month') {
             return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
         } else if (timeFrame === 'year') {
@@ -137,9 +115,11 @@ function initChart(data) {
             datasets: [{
                 label: 'Carbon Emissions (tons)',
                 data: data.values,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                borderColor: 'rgba(255, 255, 255, 1)',
-                borderWidth: 1
+                backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                hoverBackgroundColor: 'rgba(0, 123, 255, 0.7)'
             }]
         },
         options: {
@@ -149,7 +129,7 @@ function initChart(data) {
                     beginAtZero: true,
                     title: {
                         display: true,
-                        text: 'Carbon Emissions (kg CO2)'
+                        text: 'Carbon Emissions (tons)'
                     }
                 },
                 x: {
@@ -157,6 +137,17 @@ function initChart(data) {
                         display: true,
                         text: 'Date'
                     }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#eee',
+                        font: { size: 14 }
+                    }
+                },
+                tooltip: {
+                    enabled: true
                 }
             }
         }
@@ -169,21 +160,33 @@ function disconnect() {
     console.log('Disconnected from MetaMask');
 }
 
-// Add a button in your HTML to trigger the disconnect
-document.getElementById('disconnectFromMetamask').addEventListener('click', disconnect);
+// Add event listeners after DOM content is loaded
+window.addEventListener('DOMContentLoaded', () => {
+    // Load CSV data on page load
+    loadCSV();
 
-// Connect button event listener using the ID
-const connectButton = document.getElementById('connectToMetamask');
-connectButton.addEventListener('click', init);
+    // Connect button event listener
+    const connectButton = document.getElementById('connectToMetamask');
+    if (connectButton) {
+        connectButton.addEventListener('click', init);
+    } else {
+        console.error('Connect button not found');
+    }
 
-// Load CSV data on page load
-window.onload = loadCSV;
+    // Disconnect button event listener
+    const disconnectButton = document.getElementById('disconnectFromMetamask');
+    if (disconnectButton) {
+        disconnectButton.addEventListener('click', disconnect);
+    } else {
+        console.error('Disconnect button not found');
+    }
 
-// Add event listeners for the filter buttons
-document.querySelectorAll('.filter-btn').forEach(button => {
-    button.addEventListener('click', (event) => {
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        event.target.classList.add('active');
-        updateChart(event.target.textContent.toLowerCase());
+    // Add event listeners for the filter buttons
+    document.querySelectorAll('.filter-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            updateChart(event.target.textContent.toLowerCase());
+        });
     });
 });
